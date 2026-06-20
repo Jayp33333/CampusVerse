@@ -1,4 +1,5 @@
 import { useRef, type MutableRefObject } from "react";
+import { Room } from "colyseus.js";
 import { Billboard, Text } from "@react-three/drei";
 import { CharacterAnimState, CharacterModel } from "./CharacterModel";
 import type { EmoteId } from "../character/emotes";
@@ -49,4 +50,14 @@ export function triggerEmote(
 ) {
   animState.current.emoteId = id;
   animState.current.emoteSeq += 1;
+}
+
+// Play locally and tell the server so other players see the same emote.
+export function playEmote(
+  room: Room,
+  animState: MutableRefObject<CharacterAnimState>,
+  id: EmoteId
+) {
+  triggerEmote(animState, id);
+  room.send("emote", { id });
 }

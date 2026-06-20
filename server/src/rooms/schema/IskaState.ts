@@ -12,6 +12,11 @@ export class Player extends Schema {
 
   // Facing direction (radians around the Y axis)
   @type("number") rotation: number = 0;
+
+  @type("boolean") moving: boolean = false;
+
+  @type("string") emote: string = "";
+  @type("number") emoteSeq: number = 0;
 }
 
 export class IskaState extends Schema {

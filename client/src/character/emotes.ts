@@ -87,3 +87,7 @@ export const EMOTE_LIST = Object.entries(EMOTES).map(([id, def]) => ({
 export const EMOTE_BY_KEY: Partial<Record<string, EmoteId>> = Object.fromEntries(
   EMOTE_LIST.map((e) => [e.key, e.id])
 );
+
+export function isEmoteId(value: string): value is EmoteId {
+  return value in EMOTES;
+}

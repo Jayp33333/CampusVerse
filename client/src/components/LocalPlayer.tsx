@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Room } from "colyseus.js";
 import * as THREE from "three";
-import { Avatar, triggerEmote, useCharacterAnimState } from "./Avatar";
+import { Avatar, playEmote, useCharacterAnimState } from "./Avatar";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useMobileInput } from "../context/MobileInputContext";
@@ -116,12 +116,12 @@ export function LocalPlayer({ room, name, color }: Props) {
       const emoteId = EMOTE_BY_KEY[e.code];
       if (!emoteId) return;
       e.preventDefault();
-      triggerEmote(animState, emoteId);
+      playEmote(room, animState, emoteId);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isMobile, animState]);
+  }, [isMobile, animState, room]);
 
   useFrame((_, delta) => {
     const g = group.current;
@@ -152,7 +152,7 @@ export function LocalPlayer({ room, name, color }: Props) {
 
     if (mobileInput && mobileInput.emoteSeq !== lastMobileEmoteSeq.current && mobileInput.emoteId) {
       lastMobileEmoteSeq.current = mobileInput.emoteSeq;
-      triggerEmote(animState, mobileInput.emoteId);
+      playEmote(room, animState, mobileInput.emoteId);
     }
 
     const isMoving = Math.hypot(inF, inR) > 0.05;
@@ -277,6 +277,7 @@ export function LocalPlayer({ room, name, color }: Props) {
         y: g.position.y,
         z: g.position.z,
         rotation: rotation.current,
+        moving: isMoving,
       });
     }
   });

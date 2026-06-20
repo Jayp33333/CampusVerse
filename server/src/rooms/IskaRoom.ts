@@ -6,6 +6,11 @@ interface MovePayload {
   y: number;
   z: number;
   rotation: number;
+  moving?: boolean;
+}
+
+interface EmotePayload {
+  id: string;
 }
 
 interface ShovePayload {
@@ -34,6 +39,16 @@ const COLORS = [
   "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
 ];
 
+const VALID_EMOTES = new Set([
+  "clapping",
+  "death",
+  "punch",
+  "roll",
+  "sitting",
+  "standing",
+  "swordSlash",
+]);
+
 export class IskaRoom extends Room<IskaState> {
   maxClients = 50;
 
@@ -48,6 +63,7 @@ export class IskaRoom extends Room<IskaState> {
       player.y = data.y;
       player.z = data.z;
       player.rotation = data.rotation;
+      player.moving = !!data.moving;
     });
 
     // Player-vs-player push: relay the impulse to the target's own client,
@@ -96,6 +112,14 @@ export class IskaRoom extends Room<IskaState> {
 
       client.send("whisper", payload);
       target.send("whisper", payload);
+    });
+
+    this.onMessage("emote", (client, data: EmotePayload) => {
+      if (!VALID_EMOTES.has(data.id)) return;
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      player.emote = data.id;
+      player.emoteSeq += 1;
     });
 
     console.log("IskaRoom created:", this.roomId);

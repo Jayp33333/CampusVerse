@@ -38,6 +38,9 @@ export interface PlayerState {
   y: number;
   z: number;
   rotation: number;
+  moving: boolean;
+  emote: string;
+  emoteSeq: number;
 }
 
 // joinOrCreate resolves before the first state patch arrives, so players
