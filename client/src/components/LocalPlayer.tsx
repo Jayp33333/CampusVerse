@@ -15,8 +15,12 @@ const GRAVITY = -25; // units per second^2
 const JUMP_SPEED = 9; // initial upward velocity — air time ≈ 2 * JUMP_SPEED / |GRAVITY|
 const PLAYER_RADIUS = 0.35;
 
-const CAM_DISTANCE = 9; // how far the camera sits behind the player
-const CAM_HEIGHT = 6; // how high the camera floats
+const CAM_DISTANCE_DEFAULT = 9; // default orbit radius behind the player
+const CAM_HEIGHT_RATIO = 6 / 9; // keep pitch consistent while zooming
+const CAM_DISTANCE_MIN = 4;
+const CAM_DISTANCE_MAX = 18;
+const ZOOM_WHEEL_SPEED = 0.012;
+const ZOOM_PINCH_SPEED = 0.035;
 const KEY_ROT_SPEED = 2.2; // radians/sec for Q/E
 const MOUSE_SENSITIVITY = 0.005; // radians per pixel dragged
 const MOBILE_LOOK_SENSITIVITY = 0.004;
@@ -54,6 +58,7 @@ export function LocalPlayer({ room, name, color }: Props) {
   // Camera orbit angle (yaw) around the player.
   const camYaw = useRef(0);
   const camYawTarget = useRef(0);
+  const camDistance = useRef(CAM_DISTANCE_DEFAULT);
   const pointerLocked = useRef(false);
 
   // Knockback velocity from being shoved by other players.
@@ -126,7 +131,7 @@ export function LocalPlayer({ room, name, color }: Props) {
       const hint = document.createElement("div");
       hint.className = "pointer-lock-hint";
       hint.textContent =
-        "Click the game to lock mouse · Move mouse to look · Left click punch · Esc unlock";
+        "Click the game to lock mouse · Move mouse to look · Scroll zoom · Left click punch · Esc unlock";
       document.body.appendChild(hint);
       lockHintEl.current = hint;
     }
@@ -184,6 +189,25 @@ export function LocalPlayer({ room, name, color }: Props) {
       }
     };
   }, [gl, isMobile, tryPunch]);
+
+  // Desktop: scroll wheel zooms the orbit camera in/out.
+  useEffect(() => {
+    if (isMobile) return;
+
+    const canvas = gl.domElement;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      camDistance.current = THREE.MathUtils.clamp(
+        camDistance.current + e.deltaY * ZOOM_WHEEL_SPEED,
+        CAM_DISTANCE_MIN,
+        CAM_DISTANCE_MAX
+      );
+    };
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, [gl, isMobile]);
 
   // Desktop: number keys trigger emotes (punch excluded).
   useEffect(() => {
@@ -249,6 +273,15 @@ export function LocalPlayer({ room, name, color }: Props) {
         camYawTarget.current -=
           mobileInput.lookDeltaX * MOBILE_LOOK_SENSITIVITY;
         mobileInput.lookDeltaX = 0;
+      }
+
+      if (mobileInput.zoomDelta !== 0) {
+        camDistance.current = THREE.MathUtils.clamp(
+          camDistance.current + mobileInput.zoomDelta,
+          CAM_DISTANCE_MIN,
+          CAM_DISTANCE_MAX
+        );
+        mobileInput.zoomDelta = 0;
       }
 
       const smooth = isMoving
@@ -335,10 +368,12 @@ export function LocalPlayer({ room, name, color }: Props) {
     });
 
     // Orbiting third-person camera that trails the player at camYaw.
+    const distance = camDistance.current;
+    const height = distance * CAM_HEIGHT_RATIO;
     const desired = camTarget.current.set(
-      g.position.x + Math.sin(yaw) * CAM_DISTANCE,
-      g.position.y + CAM_HEIGHT,
-      g.position.z + Math.cos(yaw) * CAM_DISTANCE
+      g.position.x + Math.sin(yaw) * distance,
+      g.position.y + height,
+      g.position.z + Math.cos(yaw) * distance
     );
     camera.position.lerp(desired, 1 - Math.pow(0.001, delta));
     camera.lookAt(g.position.x, g.position.y + 1, g.position.z);

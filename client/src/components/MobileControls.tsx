@@ -5,6 +5,14 @@ import { FaHandFist } from "react-icons/fa6";
 
 const JOYSTICK_RADIUS = 56;
 const DEAD_ZONE = 0.12;
+const ZOOM_PINCH_SPEED = 0.035;
+
+function pinchDistance(touches: React.TouchList | TouchList) {
+  if (touches.length < 2) return 0;
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
 
 function clampKnob(dx: number, dy: number) {
   const dist = Math.hypot(dx, dy);
@@ -29,6 +37,7 @@ export function MobileControls() {
   const touchId = useRef<number | null>(null);
   const lookId = useRef<number | null>(null);
   const lastLookX = useRef(0);
+  const lastPinchDist = useRef(0);
   const center = useRef({ x: 0, y: 0 });
 
   const resetJoystick = useCallback(() => {
@@ -109,6 +118,30 @@ export function MobileControls() {
     input.lookActive = false;
   };
 
+  const onLookTouchStart = (e: React.TouchEvent) => {
+    if (!input || e.touches.length !== 2) return;
+    e.stopPropagation();
+    lookId.current = null;
+    input.lookActive = false;
+    lastPinchDist.current = pinchDistance(e.touches);
+  };
+
+  const onLookTouchMove = (e: React.TouchEvent) => {
+    if (!input || e.touches.length !== 2) return;
+    e.stopPropagation();
+    const dist = pinchDistance(e.touches);
+    if (lastPinchDist.current > 0) {
+      input.zoomDelta += (dist - lastPinchDist.current) * ZOOM_PINCH_SPEED;
+    }
+    lastPinchDist.current = dist;
+  };
+
+  const onLookTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      lastPinchDist.current = 0;
+    }
+  };
+
   if (!input) return null;
 
   return (
@@ -119,6 +152,10 @@ export function MobileControls() {
         onPointerMove={onLookMove}
         onPointerUp={onLookEnd}
         onPointerCancel={onLookEnd}
+        onTouchStart={onLookTouchStart}
+        onTouchMove={onLookTouchMove}
+        onTouchEnd={onLookTouchEnd}
+        onTouchCancel={onLookTouchEnd}
       />
 
       <div

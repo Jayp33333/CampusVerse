@@ -6,6 +6,7 @@ export interface MobileInput {
   moveY: number;
   jump: boolean;
   lookDeltaX: number;
+  zoomDelta: number;
   lookActive: boolean;
   emoteSeq: number;
   emoteId: EmoteId | null;
@@ -20,6 +21,7 @@ export function MobileInputProvider({ children }: { children: ReactNode }) {
     moveY: 0,
     jump: false,
     lookDeltaX: 0,
+    zoomDelta: 0,
     lookActive: false,
     emoteSeq: 0,
     emoteId: null,
