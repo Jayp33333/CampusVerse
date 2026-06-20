@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/avatar.tsx","./src/components/ground.tsx","./src/components/localplayer.tsx","./src/components/remoteplayer.tsx","./src/components/world.tsx","./src/hooks/usekeyboard.ts","./src/network/colyseus.ts","./src/world/obstacles.ts"],"version":"5.9.3"}

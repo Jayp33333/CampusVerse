@@ -1,0 +1,29 @@
+{
+  "name": "campusverse-server",
+  "version": "0.1.0",
+  "description": "Colyseus multiplayer server for CampusVerse",
+  "private": true,
+  "type": "commonjs",
+  "main": "build/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.16.0",
+    "@colyseus/monitor": "^0.16.0",
+    "@colyseus/schema": "^3.0.0",
+    "@colyseus/ws-transport": "^0.16.0",
+    "colyseus": "^0.16.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.0"
+  }
+}

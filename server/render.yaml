@@ -1,0 +1,19 @@
+# Render Blueprint for the CampusVerse Colyseus server.
+# In Render: New + > Blueprint, point it at this repo. Render auto-detects this.
+services:
+  - type: web
+    name: campusverse-server
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        sync: false # set to your client URL, e.g. https://campusverse.vercel.app
+      - key: MONITOR_USER
+        sync: false
+      - key: MONITOR_PASS
+        sync: false
