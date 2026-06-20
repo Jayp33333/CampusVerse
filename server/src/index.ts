@@ -4,7 +4,7 @@ import cors from "cors";
 import { Server } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
-import { CampusRoom } from "./rooms/CampusRoom";
+import { IskaRoom } from "./rooms/IskaRoom";
 
 const port = Number(process.env.PORT) || 2567;
 const isProd = process.env.NODE_ENV === "production";
@@ -12,7 +12,7 @@ const isProd = process.env.NODE_ENV === "production";
 const app = express();
 
 // CORS: allow all in dev; in prod restrict to a comma-separated allowlist
-// from CLIENT_ORIGIN (e.g. "https://campusverse.vercel.app").
+// from CLIENT_ORIGIN (e.g. "https://iskaworld.vercel.app").
 const allowed = (process.env.CLIENT_ORIGIN || "")
   .split(",")
   .map((s) => s.trim())
@@ -25,7 +25,7 @@ app.use(
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.send("CampusVerse server is running.");
+  res.send("IskaWorld server is running.");
 });
 
 // HTTP Basic Auth gate for the monitor dashboard.
@@ -38,7 +38,7 @@ function basicAuth(req: Request, res: Response, next: NextFunction) {
     const [u, p] = Buffer.from(encoded, "base64").toString().split(":");
     if (u === user && p === pass) return next();
   }
-  res.set("WWW-Authenticate", 'Basic realm="CampusVerse Monitor"');
+  res.set("WWW-Authenticate", 'Basic realm="IskaWorld Monitor"');
   res.status(401).send("Authentication required.");
 }
 
@@ -56,7 +56,7 @@ const gameServer = new Server({
   transport: new WebSocketTransport({ server }),
 });
 
-gameServer.define("campus", CampusRoom);
+gameServer.define("iska", IskaRoom);
 
 gameServer.listen(port);
-console.log(`CampusVerse listening on ws://localhost:${port}`);
+console.log(`IskaWorld listening on ws://localhost:${port}`);

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Sky } from "@react-three/drei";
 import { Room } from "colyseus.js";
-import { joinCampus, getStateCallbacks } from "./network/colyseus";
+import { joinWorld, getStateCallbacks } from "./network/colyseus";
 import { World } from "./components/World";
 
 export default function App() {
@@ -17,9 +17,9 @@ export default function App() {
     if (!joinedName) return;
     let active = true;
     let joined: Room | null = null;
-    setStatus("Connecting to campus...");
+    setStatus("Connecting to IskaWorld...");
 
-    joinCampus(joinedName)
+    joinWorld(joinedName)
       .then((r) => {
         if (!active) {
           r.leave();
@@ -49,7 +49,7 @@ export default function App() {
     };
   }, [joinedName]);
 
-  const enterCampus = () => {
+  const enterWorld = () => {
     const trimmed = name.trim();
     if (trimmed.length > 0) setJoinedName(trimmed.slice(0, 16));
   };
@@ -59,8 +59,8 @@ export default function App() {
     return (
       <div className="login">
         <div className="login-card">
-          <h1>CampusVerse</h1>
-          <p>Enter your name to join the campus</p>
+          <h1>IskaWorld</h1>
+          <p>Enter your name to join IskaWorld</p>
           <input
             ref={inputRef}
             autoFocus
@@ -68,10 +68,10 @@ export default function App() {
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && enterCampus()}
+            onKeyDown={(e) => e.key === "Enter" && enterWorld()}
           />
-          <button onClick={enterCampus} disabled={name.trim().length === 0}>
-            Enter Campus
+          <button onClick={enterWorld} disabled={name.trim().length === 0}>
+            Enter World
           </button>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function App() {
   return (
     <>
       <div className="hud">
-        <div><b>CampusVerse</b> — playing as <b>{joinedName}</b></div>
+        <div><b>IskaWorld</b> — playing as <b>{joinedName}</b></div>
         <div>Move: <b>WASD</b> / Arrow keys</div>
         <div>Jump: <b>Space</b></div>
         <div>Rotate camera: <b>Q</b> / <b>E</b> or drag mouse</div>

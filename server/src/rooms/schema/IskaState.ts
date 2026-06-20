@@ -14,6 +14,6 @@ export class Player extends Schema {
   @type("number") rotation: number = 0;
 }
 
-export class CampusState extends Schema {
+export class IskaState extends Schema {
   @type({ map: Player }) players = new MapSchema<Player>();
 }

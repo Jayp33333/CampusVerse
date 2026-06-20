@@ -1,7 +1,7 @@
 {
-  "name": "campusverse-server",
+  "name": "iskaworld-server",
   "version": "0.1.0",
-  "description": "Colyseus multiplayer server for CampusVerse",
+  "description": "Colyseus multiplayer server for IskaWorld",
   "private": true,
   "type": "commonjs",
   "main": "build/index.js",

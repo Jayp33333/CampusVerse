@@ -1,8 +1,8 @@
-# Render Blueprint for the CampusVerse Colyseus server.
+# Render Blueprint for the IskaWorld Colyseus server.
 # In Render: New + > Blueprint, point it at this repo. Render auto-detects this.
 services:
   - type: web
-    name: campusverse-server
+    name: iskaworld-server
     runtime: docker
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CLIENT_ORIGIN
-        sync: false # set to your client URL, e.g. https://campusverse.vercel.app
+        sync: false # set to your client URL, e.g. https://iskaworld.vercel.app
       - key: MONITOR_USER
         sync: false
       - key: MONITOR_PASS

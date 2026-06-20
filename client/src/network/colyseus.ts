@@ -18,6 +18,6 @@ export interface PlayerState {
   rotation: number;
 }
 
-export async function joinCampus(name: string): Promise<Room> {
-  return client.joinOrCreate("campus", { name });
+export async function joinWorld(name: string): Promise<Room> {
+  return client.joinOrCreate("iska", { name });
 }

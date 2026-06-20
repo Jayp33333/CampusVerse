@@ -1,5 +1,5 @@
 import { Room, Client } from "@colyseus/core";
-import { CampusState, Player } from "./schema/CampusState";
+import { IskaState, Player } from "./schema/IskaState";
 
 interface MovePayload {
   x: number;
@@ -19,11 +19,11 @@ const COLORS = [
   "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
 ];
 
-export class CampusRoom extends Room<CampusState> {
+export class IskaRoom extends Room<IskaState> {
   maxClients = 50;
 
   onCreate(options: any) {
-    this.state = new CampusState();
+    this.state = new IskaState();
 
     // Client tells us where it moved; we update its player in the shared state.
     this.onMessage("move", (client, data: MovePayload) => {
@@ -44,7 +44,7 @@ export class CampusRoom extends Room<CampusState> {
       }
     });
 
-    console.log("CampusRoom created:", this.roomId);
+    console.log("IskaRoom created:", this.roomId);
   }
 
   onJoin(client: Client, options: { name?: string }) {
@@ -68,6 +68,6 @@ export class CampusRoom extends Room<CampusState> {
   }
 
   onDispose() {
-    console.log("CampusRoom disposed:", this.roomId);
+    console.log("IskaRoom disposed:", this.roomId);
   }
 }

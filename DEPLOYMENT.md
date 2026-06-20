@@ -1,4 +1,4 @@
-# Deploying CampusVerse
+# Deploying IskaWorld
 
 This gets you a public link friends can join over the internet. Two pieces:
 
@@ -23,13 +23,13 @@ This gets you a public link friends can join over the internet. Two pieces:
 3. Set environment variables on the service:
    - `NODE_ENV` = `production`
    - `CLIENT_ORIGIN` = your client URL (add after step 2 below, e.g.
-     `https://campusverse.vercel.app`)
+     `https://iskaworld.vercel.app`)
    - `MONITOR_USER` = an admin username
    - `MONITOR_PASS` = a strong password
 4. Deploy. Your server URL will look like
-   `https://campusverse-server.onrender.com`.
+   `https://iskaworld-server.onrender.com`.
    The WebSocket URL is the same host with `wss://`:
-   `wss://campusverse-server.onrender.com`.
+   `wss://iskaworld-server.onrender.com`.
 
 ### Option B — Railway
 
@@ -39,7 +39,7 @@ This gets you a public link friends can join over the internet. Two pieces:
 4. Railway gives you a public domain; use it as `wss://<that-domain>`.
 
 ### Verify
-Visit `https://<your-server-host>/` → should say "CampusVerse server is running."
+Visit `https://<your-server-host>/` → should say "IskaWorld server is running."
 The monitor is at `/monitor` (will prompt for `MONITOR_USER` / `MONITOR_PASS`).
 
 ---
@@ -54,7 +54,7 @@ The monitor is at `/monitor` (will prompt for `MONITOR_USER` / `MONITOR_PASS`).
 - **Environment variable:**
   - `VITE_SERVER_URL` = `wss://<your-server-host>`  ← from step 1
 
-Deploy. You'll get a URL like `https://campusverse.vercel.app`.
+Deploy. You'll get a URL like `https://iskaworld.vercel.app`.
 
 ### Close the loop
 Go back to the **server** and set `CLIENT_ORIGIN` to that client URL, then
