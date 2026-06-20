@@ -7,6 +7,7 @@ import { World } from "./components/World";
 import { MobileControls } from "./components/MobileControls";
 import { RadialEmoteWheel } from "./components/RadialEmoteWheel";
 import { ChatPanel } from "./components/ChatPanel";
+import { RespawnOverlay } from "./components/RespawnOverlay";
 import { CharacterPreview } from "./components/CharacterPreview";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { usePlayerPresence } from "./hooks/usePlayerPresence";
@@ -206,6 +207,7 @@ export default function App() {
       )}
 
       {room && <ChatPanel room={room} />}
+      {room && <RespawnOverlay room={room} />}
 
       {!room && (
         <div className="joining">

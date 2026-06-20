@@ -131,7 +131,7 @@ export function MobileControls() {
     e.stopPropagation();
     const dist = pinchDistance(e.touches);
     if (lastPinchDist.current > 0) {
-      input.zoomDelta += (dist - lastPinchDist.current) * ZOOM_PINCH_SPEED;
+      input.zoomDelta -= (dist - lastPinchDist.current) * ZOOM_PINCH_SPEED;
     }
     lastPinchDist.current = dist;
   };

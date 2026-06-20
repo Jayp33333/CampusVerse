@@ -31,6 +31,7 @@ export const ANIM_PLAYBACK = {
 export type CharacterAnimState = {
   isMoving: boolean;
   isGrounded: boolean;
+  isDead: boolean;
   emoteSeq: number;
   emoteId: EmoteId | null;
 };
@@ -98,6 +99,7 @@ export function CharacterModel({ color, animState }: Props) {
   const lastEmoteSeq = useRef(0);
   const emoteMode = useRef<"none" | "playing" | "held">("none");
   const activeEmoteId = useRef<EmoteId | null>(null);
+  const wasDead = useRef(false);
   const finishHandler = useRef<((e: { action: THREE.AnimationAction }) => void) | null>(
     null
   );
@@ -185,6 +187,19 @@ export function CharacterModel({ color, animState }: Props) {
 
   useFrame(() => {
     const state = animState.current;
+
+    if (wasDead.current && !state.isDead) {
+      clearEmote();
+    }
+    wasDead.current = state.isDead;
+
+    if (state.isDead) {
+      if (state.emoteSeq !== lastEmoteSeq.current && state.emoteId === "death") {
+        lastEmoteSeq.current = state.emoteSeq;
+        playEmote("death");
+      }
+      return;
+    }
 
     if (state.emoteSeq !== lastEmoteSeq.current && state.emoteId) {
       lastEmoteSeq.current = state.emoteSeq;

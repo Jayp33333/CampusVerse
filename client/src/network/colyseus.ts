@@ -41,6 +41,10 @@ export interface PlayerState {
   moving: boolean;
   emote: string;
   emoteSeq: number;
+  health: number;
+  maxHealth: number;
+  dead: boolean;
+  respawnAt: number;
 }
 
 // joinOrCreate resolves before the first state patch arrives, so players

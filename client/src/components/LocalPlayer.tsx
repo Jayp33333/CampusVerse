@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Room } from "colyseus.js";
 import * as THREE from "three";
-import { Avatar, playEmote, playPunch, useCharacterAnimState } from "./Avatar";
+import { Avatar, playEmote, playPunch, triggerEmote, useCharacterAnimState } from "./Avatar";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useMobileInput } from "../context/MobileInputContext";
@@ -68,6 +68,8 @@ export function LocalPlayer({ room, name, color }: Props) {
   const animState = useCharacterAnimState();
   const lastMobileEmoteSeq = useRef(0);
   const lastMobilePunchSeq = useRef(0);
+  const lastServerEmoteSeq = useRef(0);
+  const wasDead = useRef(false);
   const lockHintEl = useRef<HTMLDivElement | null>(null);
 
   // Start at the server-assigned spawn point (same as other clients see you).
@@ -83,6 +85,8 @@ export function LocalPlayer({ room, name, color }: Props) {
   // Receive shove impulses relayed by the server and turn them into knockback.
   useEffect(() => {
     const handler = (msg: { dx: number; dz: number }) => {
+      const self = (room.state.players as any).get(room.sessionId);
+      if (self?.dead) return;
       knockX.current += msg.dx * PUNCH_KNOCKBACK;
       knockZ.current += msg.dz * PUNCH_KNOCKBACK;
     };
@@ -95,6 +99,9 @@ export function LocalPlayer({ room, name, color }: Props) {
     const g = group.current;
     if (!g) return;
 
+    const self = (room.state.players as any).get(room.sessionId);
+    if (self?.dead) return;
+
     punchCooldown.current = PUNCH_COOLDOWN;
     playPunch(room, animState);
 
@@ -105,7 +112,7 @@ export function LocalPlayer({ room, name, color }: Props) {
     rotation.current = g.rotation.y;
 
     (room.state.players as any).forEach((p: any, id: string) => {
-      if (id === room.sessionId) return;
+      if (id === room.sessionId || p.dead) return;
 
       const ox = p.x - g.position.x;
       const oz = p.z - g.position.z;
@@ -214,6 +221,8 @@ export function LocalPlayer({ room, name, color }: Props) {
     if (isMobile) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      const self = (room.state.players as any).get(room.sessionId);
+      if (self?.dead) return;
       const emoteId = EMOTE_BY_KEY[e.code];
       if (!emoteId) return;
       e.preventDefault();
@@ -227,6 +236,36 @@ export function LocalPlayer({ room, name, color }: Props) {
   useFrame((_, delta) => {
     const g = group.current;
     if (!g) return;
+
+    const self = (room.state.players as any).get(room.sessionId);
+    const isDead = !!self?.dead;
+    animState.current.isDead = isDead;
+
+    if (self) {
+      if (
+        isDead &&
+        self.emoteSeq !== lastServerEmoteSeq.current &&
+        self.emote === "death"
+      ) {
+        lastServerEmoteSeq.current = self.emoteSeq;
+        triggerEmote(animState, "death");
+      }
+
+      if (!isDead && wasDead.current) {
+        lastServerEmoteSeq.current = self.emoteSeq;
+        g.position.set(self.x, self.y, self.z);
+        rotation.current = self.rotation;
+        g.rotation.y = self.rotation;
+        velocityY.current = 0;
+        grounded.current = true;
+        knockX.current = 0;
+        knockZ.current = 0;
+        animState.current.emoteId = null;
+        animState.current.emoteSeq += 1;
+      }
+      wasDead.current = isDead;
+    }
+
     const k = keys.current;
 
     // Rotate the camera with Q / E (desktop).
@@ -253,17 +292,17 @@ export function LocalPlayer({ room, name, color }: Props) {
 
     if (mobileInput && mobileInput.emoteSeq !== lastMobileEmoteSeq.current && mobileInput.emoteId) {
       lastMobileEmoteSeq.current = mobileInput.emoteSeq;
-      playEmote(room, animState, mobileInput.emoteId);
+      if (!isDead) playEmote(room, animState, mobileInput.emoteId);
     }
 
     if (mobileInput && mobileInput.punchSeq !== lastMobilePunchSeq.current) {
       lastMobilePunchSeq.current = mobileInput.punchSeq;
-      tryPunch();
+      if (!isDead) tryPunch();
     }
 
     punchCooldown.current = Math.max(0, punchCooldown.current - delta);
 
-    const isMoving = Math.hypot(inF, inR) > 0.05;
+    const isMoving = !isDead && Math.hypot(inF, inR) > 0.05;
     animState.current.isMoving = isMoving;
     animState.current.isGrounded = grounded.current;
 
@@ -301,7 +340,7 @@ export function LocalPlayer({ room, name, color }: Props) {
     let dx = forwardX * inF + rightX * inR;
     let dz = forwardZ * inF + rightZ * inR;
 
-    if (dx !== 0 || dz !== 0) {
+    if (!isDead && (dx !== 0 || dz !== 0)) {
       const len = Math.hypot(dx, dz);
       dx /= len;
       dz /= len;
@@ -318,15 +357,18 @@ export function LocalPlayer({ room, name, color }: Props) {
 
     // Jump + gravity (vertical motion).
     const wantsJump =
-      k["Space"] ||
-      k["KeyJ"] ||
-      (isMobile && mobileInput?.jump);
+      !isDead &&
+      (k["Space"] ||
+        k["KeyJ"] ||
+        (isMobile && mobileInput?.jump));
     if (wantsJump && grounded.current) {
       velocityY.current = JUMP_SPEED;
       grounded.current = false;
     }
     velocityY.current += GRAVITY * delta;
-    g.position.y += velocityY.current * delta;
+    if (!isDead) {
+      g.position.y += velocityY.current * delta;
+    }
     if (g.position.y <= 0) {
       g.position.y = 0;
       velocityY.current = 0;
@@ -334,7 +376,7 @@ export function LocalPlayer({ room, name, color }: Props) {
     }
 
     // Apply incoming knockback (then let it decay).
-    if (knockX.current !== 0 || knockZ.current !== 0) {
+    if (!isDead && (knockX.current !== 0 || knockZ.current !== 0)) {
       const kx = g.position.x + knockX.current * delta;
       if (!collidesAt(kx, g.position.z, PLAYER_RADIUS)) g.position.x = kx;
       const kz = g.position.z + knockZ.current * delta;
@@ -350,22 +392,24 @@ export function LocalPlayer({ room, name, color }: Props) {
     }
 
     // Soft overlap separation only — no knockback unless punched.
-    (room.state.players as any).forEach((p: any, id: string) => {
-      if (id === room.sessionId) return;
-      const ox = g.position.x - p.x;
-      const oz = g.position.z - p.z;
-      const d = Math.hypot(ox, oz);
-      if (d > 0.0001 && d < PP_MIN_DIST) {
-        const nx = ox / d;
-        const nz = oz / d;
-        const overlap = PP_MIN_DIST - d;
+    if (!isDead) {
+      (room.state.players as any).forEach((p: any, id: string) => {
+        if (id === room.sessionId || p.dead) return;
+        const ox = g.position.x - p.x;
+        const oz = g.position.z - p.z;
+        const d = Math.hypot(ox, oz);
+        if (d > 0.0001 && d < PP_MIN_DIST) {
+          const nx = ox / d;
+          const nz = oz / d;
+          const overlap = PP_MIN_DIST - d;
 
-        const sx = g.position.x + nx * overlap * 0.5;
-        if (!collidesAt(sx, g.position.z, PLAYER_RADIUS)) g.position.x = sx;
-        const sz = g.position.z + nz * overlap * 0.5;
-        if (!collidesAt(g.position.x, sz, PLAYER_RADIUS)) g.position.z = sz;
-      }
-    });
+          const sx = g.position.x + nx * overlap * 0.5;
+          if (!collidesAt(sx, g.position.z, PLAYER_RADIUS)) g.position.x = sx;
+          const sz = g.position.z + nz * overlap * 0.5;
+          if (!collidesAt(g.position.x, sz, PLAYER_RADIUS)) g.position.z = sz;
+        }
+      });
+    }
 
     // Orbiting third-person camera that trails the player at camYaw.
     const distance = camDistance.current;
@@ -380,7 +424,7 @@ export function LocalPlayer({ room, name, color }: Props) {
 
     // Throttle network updates.
     sendTimer.current += delta;
-    if (sendTimer.current >= SEND_INTERVAL) {
+    if (!isDead && sendTimer.current >= SEND_INTERVAL) {
       sendTimer.current = 0;
       room.send("move", {
         x: g.position.x,
@@ -392,9 +436,18 @@ export function LocalPlayer({ room, name, color }: Props) {
     }
   });
 
+  const selfSchema = (room.state.players as any).get(room.sessionId);
+
   return (
     <group ref={group}>
-      <Avatar color={color} name={name} animState={animState} />
+      {selfSchema && (
+        <Avatar
+          color={color}
+          name={name}
+          animState={animState}
+          schema={selfSchema}
+        />
+      )}
     </group>
   );
 }

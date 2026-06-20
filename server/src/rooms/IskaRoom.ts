@@ -1,5 +1,6 @@
 import { Room, Client } from "@colyseus/core";
 import { IskaState, Player } from "./schema/IskaState";
+import { randomSpawnPosition } from "../world/spawn";
 
 interface MovePayload {
   x: number;
@@ -49,8 +50,66 @@ const VALID_EMOTES = new Set([
   "swordSlash",
 ]);
 
+const MAX_HEALTH = 100;
+const PUNCH_DAMAGE = 25;
+const PUNCH_RANGE = 1.6;
+const PUNCH_ALIGN_MIN = 0.85;
+const RESPAWN_MS = 5000;
+
 export class IskaRoom extends Room<IskaState> {
   maxClients = 50;
+  private respawnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  private clearRespawnTimer(sessionId: string) {
+    const timer = this.respawnTimers.get(sessionId);
+    if (timer) clearTimeout(timer);
+    this.respawnTimers.delete(sessionId);
+  }
+
+  private killPlayer(sessionId: string) {
+    const player = this.state.players.get(sessionId);
+    if (!player || player.dead) return;
+
+    player.health = 0;
+    player.dead = true;
+    player.moving = false;
+    player.y = 0;
+    player.emote = "death";
+    player.emoteSeq += 1;
+    player.respawnAt = Date.now() + RESPAWN_MS;
+
+    this.clearRespawnTimer(sessionId);
+    const timer = setTimeout(() => this.respawnPlayer(sessionId), RESPAWN_MS);
+    this.respawnTimers.set(sessionId, timer);
+  }
+
+  private applySpawnPosition(sessionId: string) {
+    const player = this.state.players.get(sessionId);
+    if (!player) return;
+
+    const others: Player[] = [];
+    this.state.players.forEach((p, id) => {
+      if (id !== sessionId) others.push(p);
+    });
+
+    const { x, z } = randomSpawnPosition(others);
+    player.x = x;
+    player.y = 0;
+    player.z = z;
+  }
+
+  private respawnPlayer(sessionId: string) {
+    this.clearRespawnTimer(sessionId);
+    const player = this.state.players.get(sessionId);
+    if (!player) return;
+
+    player.health = MAX_HEALTH;
+    player.dead = false;
+    player.respawnAt = 0;
+    this.applySpawnPosition(sessionId);
+    player.emote = "standing";
+    player.emoteSeq += 1;
+  }
 
   onCreate(options: any) {
     this.state = new IskaState();
@@ -58,7 +117,7 @@ export class IskaRoom extends Room<IskaState> {
     // Client tells us where it moved; we update its player in the shared state.
     this.onMessage("move", (client, data: MovePayload) => {
       const player = this.state.players.get(client.sessionId);
-      if (!player) return;
+      if (!player || player.dead) return;
       player.x = data.x;
       player.y = data.y;
       player.z = data.z;
@@ -69,9 +128,28 @@ export class IskaRoom extends Room<IskaState> {
     // Player-vs-player push: relay the impulse to the target's own client,
     // which is authoritative over that avatar's position (knockback).
     this.onMessage("shove", (client, data: ShovePayload) => {
+      const attacker = this.state.players.get(client.sessionId);
+      const targetPlayer = this.state.players.get(data.target);
       const target = this.clients.find((c) => c.sessionId === data.target);
-      if (target) {
-        target.send("shoved", { dx: data.dx, dz: data.dz });
+      if (!attacker || !targetPlayer || !target || attacker.dead || targetPlayer.dead) {
+        return;
+      }
+
+      const ox = targetPlayer.x - attacker.x;
+      const oz = targetPlayer.z - attacker.z;
+      const dist = Math.hypot(ox, oz);
+      if (dist > PUNCH_RANGE || dist < 0.0001) return;
+
+      const toTargetX = ox / dist;
+      const toTargetZ = oz / dist;
+      const align = toTargetX * data.dx + toTargetZ * data.dz;
+      if (align < PUNCH_ALIGN_MIN) return;
+
+      target.send("shoved", { dx: data.dx, dz: data.dz });
+
+      targetPlayer.health = Math.max(0, targetPlayer.health - PUNCH_DAMAGE);
+      if (targetPlayer.health <= 0) {
+        this.killPlayer(data.target);
       }
     });
 
@@ -117,7 +195,7 @@ export class IskaRoom extends Room<IskaState> {
     this.onMessage("emote", (client, data: EmotePayload) => {
       if (!VALID_EMOTES.has(data.id)) return;
       const player = this.state.players.get(client.sessionId);
-      if (!player) return;
+      if (!player || player.dead) return;
       player.emote = data.id;
       player.emoteSeq += 1;
     });
@@ -131,12 +209,13 @@ export class IskaRoom extends Room<IskaState> {
     player.name = options?.name || `Student-${client.sessionId.substring(0, 4)}`;
     player.color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-    // Spawn at a small random offset so players don't overlap.
-    player.x = (Math.random() - 0.5) * 6;
-    player.y = 0;
-    player.z = (Math.random() - 0.5) * 6;
+    player.health = MAX_HEALTH;
+    player.maxHealth = MAX_HEALTH;
+    player.dead = false;
+    player.respawnAt = 0;
 
     this.state.players.set(client.sessionId, player);
+    this.applySpawnPosition(client.sessionId);
 
     this.broadcast("presence", {
       event: "joined",
@@ -148,6 +227,7 @@ export class IskaRoom extends Room<IskaState> {
   }
 
   onLeave(client: Client) {
+    this.clearRespawnTimer(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (player) {
       this.broadcast("presence", {

@@ -3,8 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isEmoteId } from "../character/emotes";
 import { Avatar, triggerEmote, useCharacterAnimState } from "./Avatar";
-
-// One remote student. `state` is the live Colyseus schema object, so its
 // x/y/z/rotation fields update automatically; we just smoothly follow them.
 export function RemotePlayer({ state }: { state: any }) {
   const group = useRef<THREE.Group>(null);
@@ -26,13 +24,15 @@ export function RemotePlayer({ state }: { state: any }) {
     g.rotation.y += diff * t;
 
     // Match local player animation inputs from shared server state.
-    animState.current.isMoving = !!state.moving;
+    animState.current.isDead = !!state.dead;
+    animState.current.isMoving = !!state.moving && !state.dead;
     animState.current.isGrounded = state.y <= 0.01;
 
     if (
       state.emoteSeq !== lastEmoteSeq.current &&
       state.emote &&
-      isEmoteId(state.emote)
+      isEmoteId(state.emote) &&
+      (state.dead || state.emote !== "punch")
     ) {
       lastEmoteSeq.current = state.emoteSeq;
       triggerEmote(animState, state.emote);
@@ -41,7 +41,12 @@ export function RemotePlayer({ state }: { state: any }) {
 
   return (
     <group ref={group}>
-      <Avatar color={state.color} name={state.name} animState={animState} />
+      <Avatar
+        color={state.color}
+        name={state.name}
+        animState={animState}
+        schema={state}
+      />
     </group>
   );
 }

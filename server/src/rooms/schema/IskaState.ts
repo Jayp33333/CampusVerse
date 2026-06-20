@@ -17,6 +17,11 @@ export class Player extends Schema {
 
   @type("string") emote: string = "";
   @type("number") emoteSeq: number = 0;
+
+  @type("number") health: number = 100;
+  @type("number") maxHealth: number = 100;
+  @type("boolean") dead: boolean = false;
+  @type("number") respawnAt: number = 0;
 }
 
 export class IskaState extends Schema {

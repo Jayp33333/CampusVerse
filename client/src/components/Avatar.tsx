@@ -3,17 +3,23 @@ import { Room } from "colyseus.js";
 import { Billboard, Text } from "@react-three/drei";
 import { CharacterAnimState, CharacterModel } from "./CharacterModel";
 import type { EmoteId } from "../character/emotes";
+import { HealthBar, type HealthSchema } from "./HealthBar";
+import { RespawnTimer } from "./RespawnTimer";
 
 interface Props {
   color: string;
   name: string;
   animState: MutableRefObject<CharacterAnimState>;
+  schema: HealthSchema & { respawnAt: number };
 }
 
-export function Avatar({ color, name, animState }: Props) {
+export function Avatar({ color, name, animState, schema }: Props) {
   return (
     <group>
       <CharacterModel color={color} animState={animState} />
+
+      <HealthBar schema={schema} />
+      <RespawnTimer schema={schema} />
 
       <Billboard position={[0, 1.85, 0]}>
         <Text
@@ -35,6 +41,7 @@ export function createCharacterAnimState(): CharacterAnimState {
   return {
     isMoving: false,
     isGrounded: true,
+    isDead: false,
     emoteSeq: 0,
     emoteId: null,
   };
