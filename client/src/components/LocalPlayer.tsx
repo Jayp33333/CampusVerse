@@ -4,6 +4,8 @@ import { Room } from "colyseus.js";
 import * as THREE from "three";
 import { Avatar } from "./Avatar";
 import { useKeyboard } from "../hooks/useKeyboard";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { useMobileInput } from "../context/MobileInputContext";
 import { collidesAt } from "../world/obstacles";
 
 const SPEED = 6; // units per second
@@ -33,6 +35,8 @@ interface Props {
 export function LocalPlayer({ room, name, color }: Props) {
   const group = useRef<THREE.Group>(null);
   const keys = useKeyboard();
+  const mobileInput = useMobileInput();
+  const isMobile = useIsMobile();
   const { camera, gl } = useThree();
 
   const rotation = useRef(0);
@@ -60,7 +64,7 @@ export function LocalPlayer({ room, name, color }: Props) {
     // colyseus.js keeps one handler per message type, so no manual cleanup.
   }, [room]);
 
-  // Mouse drag to orbit the camera.
+  // Mouse / touch drag on the canvas to orbit the camera.
   useEffect(() => {
     const canvas = gl.domElement;
     const onDown = () => {
@@ -70,7 +74,9 @@ export function LocalPlayer({ room, name, color }: Props) {
       dragging.current = false;
     };
     const onMove = (e: PointerEvent) => {
-      if (dragging.current) camYaw.current -= e.movementX * MOUSE_SENSITIVITY;
+      if (!dragging.current) return;
+      const sens = isMobile ? MOUSE_SENSITIVITY * 1.6 : MOUSE_SENSITIVITY;
+      camYaw.current -= e.movementX * sens;
     };
     canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
@@ -80,7 +86,7 @@ export function LocalPlayer({ room, name, color }: Props) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointermove", onMove);
     };
-  }, [gl]);
+  }, [gl, isMobile]);
 
   useFrame((_, delta) => {
     const g = group.current;
@@ -105,6 +111,11 @@ export function LocalPlayer({ room, name, color }: Props) {
     if (k["KeyD"] || k["ArrowRight"]) inR += 1;
     if (k["KeyA"] || k["ArrowLeft"]) inR -= 1;
 
+    if (isMobile && mobileInput) {
+      inF += mobileInput.moveY;
+      inR += mobileInput.moveX;
+    }
+
     let dx = forwardX * inF + rightX * inR;
     let dz = forwardZ * inF + rightZ * inR;
 
@@ -124,7 +135,11 @@ export function LocalPlayer({ room, name, color }: Props) {
     }
 
     // Jump + gravity (vertical motion).
-    if ((k["Space"] || k["KeyJ"]) && grounded.current) {
+    const wantsJump =
+      k["Space"] ||
+      k["KeyJ"] ||
+      (isMobile && mobileInput?.jump);
+    if (wantsJump && grounded.current) {
       velocityY.current = JUMP_SPEED;
       grounded.current = false;
     }

@@ -4,6 +4,8 @@ import { Sky } from "@react-three/drei";
 import { Room } from "colyseus.js";
 import { joinWorld, getStateCallbacks, pingServer } from "./network/colyseus";
 import { World } from "./components/World";
+import { MobileControls } from "./components/MobileControls";
+import { useIsMobile } from "./hooks/useIsMobile";
 
 // connecting -> verifying the server is reachable
 // offline    -> server could not be reached (retrying)
@@ -11,6 +13,7 @@ import { World } from "./components/World";
 type Phase = "connecting" | "offline" | "ready";
 
 export default function App() {
+  const isMobile = useIsMobile();
   const [phase, setPhase] = useState<Phase>("connecting");
   const [name, setName] = useState("");
   const [joinedName, setJoinedName] = useState<string | null>(null);
@@ -160,12 +163,19 @@ export default function App() {
     <>
       <div className="hud">
         <div><b>IskaWorld</b> — playing as <b>{joinedName}</b></div>
-        <div>Move: <b>WASD</b> / Arrow keys</div>
-        <div>Jump: <b>Space</b></div>
-        <div>Rotate camera: <b>Q</b> / <b>E</b> or drag mouse</div>
+        <div className="hud-desktop">
+          <div>Move: <b>WASD</b> / Arrow keys</div>
+          <div>Jump: <b>Space</b></div>
+          <div>Rotate camera: <b>Q</b> / <b>E</b> or drag mouse</div>
+        </div>
+        <div className="hud-mobile">
+          <div>Move with joystick · Jump button · Drag to look</div>
+        </div>
         <div>Students online: <b>{count}</b></div>
       </div>
       <div className="status">{status}</div>
+
+      {room && isMobile && <MobileControls />}
 
       {!room && (
         <div className="joining">
