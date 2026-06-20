@@ -17,7 +17,9 @@ export default function App() {
   const [room, setRoom] = useState<Room | null>(null);
   const [status, setStatus] = useState("");
   const [count, setCount] = useState(0);
+  const [joinError, setJoinError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeRoomRef = useRef<Room | null>(null);
 
   // Step 1: confirm the server is reachable before showing the name entry.
   useEffect(() => {
@@ -41,17 +43,20 @@ export default function App() {
   // Step 3: once a name is entered, join the world room.
   useEffect(() => {
     if (!joinedName) return;
-    let active = true;
-    let joined: Room | null = null;
+
+    let cancelled = false;
+
+    setJoinError("");
     setStatus("Entering IskaWorld...");
 
     joinWorld(joinedName)
       .then((r) => {
-        if (!active) {
+        if (cancelled) {
           r.leave();
           return;
         }
-        joined = r;
+
+        activeRoomRef.current = r;
         setRoom(r);
         setStatus("Connected");
 
@@ -63,6 +68,8 @@ export default function App() {
         updateCount();
 
         r.onLeave(() => {
+          if (activeRoomRef.current !== r) return;
+          activeRoomRef.current = null;
           setStatus("Disconnected");
           setRoom(null);
           setJoinedName(null);
@@ -71,20 +78,28 @@ export default function App() {
       })
       .catch((e) => {
         console.error(e);
+        if (cancelled) return;
         setStatus("Failed to join the world.");
+        setJoinError("Could not join the world. Please try again.");
         setJoinedName(null);
-        setPhase("offline");
+        setPhase("ready");
       });
 
     return () => {
-      active = false;
-      joined?.leave();
+      cancelled = true;
+      if (activeRoomRef.current) {
+        activeRoomRef.current.leave();
+        activeRoomRef.current = null;
+      }
     };
   }, [joinedName]);
 
   const enterWorld = () => {
     const trimmed = name.trim();
-    if (trimmed.length > 0) setJoinedName(trimmed.slice(0, 16));
+    if (trimmed.length > 0) {
+      setJoinError("");
+      setJoinedName(trimmed.slice(0, 16));
+    }
   };
 
   // --- Phase 1: verifying the connection to the server. ---
@@ -122,6 +137,7 @@ export default function App() {
           <h1>IskaWorld</h1>
           <p className="connected">● Connected to server</p>
           <p>Enter your name to join IskaWorld</p>
+          {joinError && <p className="error">{joinError}</p>}
           <input
             ref={inputRef}
             autoFocus

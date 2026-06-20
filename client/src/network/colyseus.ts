@@ -40,6 +40,24 @@ export interface PlayerState {
   rotation: number;
 }
 
+// joinOrCreate resolves before the first state patch arrives, so players
+// is undefined if you read room.state immediately. Wait for it.
+function waitForState(room: Room): Promise<void> {
+  if (room.state?.players != null) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const handler = () => {
+      if (room.state?.players != null) {
+        room.onStateChange.remove(handler);
+        resolve();
+      }
+    };
+    room.onStateChange(handler);
+  });
+}
+
 export async function joinWorld(name: string): Promise<Room> {
-  return client.joinOrCreate("iska", { name });
+  const room = await client.joinOrCreate("iska", { name });
+  await waitForState(room);
+  return room;
 }
